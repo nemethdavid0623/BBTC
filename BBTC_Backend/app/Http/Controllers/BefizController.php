@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Befiz;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class BefizController extends Controller
 {
@@ -28,7 +29,39 @@ class BefizController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $validator = Validator::make($request->all(), [
+            'ugyfel_azon' => 'required|integer|min:1014',
+            'datum' => 'datetime',
+            'osszeg' => 'required|integer|min:0'
+        ], [
+            'ugyfel_azon' => [
+                'required' => 'Az ügyfél azonosító megadása kötelező!',
+                'integer' => 'Az ügyfél azonosító csak szám lehet!',
+                'min' => 'Az ügyfél azonosítója nem lehet 1014-nél kisebb!'
+            ],
+            'osszeg' => [
+                'required' => 'Az összeg megadása kötelező!',
+                'integer' => 'Az összeg csak szám lehet!',
+                'min' => 'Az összeg nem lehet negatív érték!'
+            ]
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nem megfelelőek az adatok!',
+                'errors' => $validator->errors()->toArray()
+            ], 422);
+        }
+
+        $newRecord = new Befiz();
+        $newRecord->ugyfel_azon = $request->ugyfel_azon;
+        $newRecord->datum = $request->datum;
+        $newRecord->osszeg = $request->osszeg;
+
+        $newRecord->save();
+
+        return response()->json(['success' => true, 'message' => 'Sikeres mentés!'], 201);
     }
 
     /**
@@ -36,7 +69,7 @@ class BefizController extends Controller
      */
     public function show(Befiz $befiz)
     {
-        //
+
     }
 
     /**
@@ -58,8 +91,15 @@ class BefizController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Befiz $befiz)
+    public function destroy(Befiz $id)
     {
-        //
+        $befizetes = Befiz::find($id);
+
+        if (!empty($befizetes)) {
+            $befizetes->delete();
+            return response()->json(["message" => "Befizetés törölve!"], 202);
+        } else {
+            return response()->json(["message" => "Befizetés nem található!"], 404);
+        }
     }
 }
